@@ -101,8 +101,7 @@ class SV_vcf():
         self.reader = helpers._get_reader(filepath)
         self.caller = caller
 
-
-    @staticmethod
+    # def _normalize_sample_names(self):
 
     def _parse_vcf(self):
 
@@ -124,17 +123,21 @@ class SV_vcf():
                 if isinstance(v, list):
                     v = ';'.join(map(str, v))
                 data[k] = v
-
+            
+            assert len(record.samples)==2
+            
+            sample_type = "normal"
             for sample in record.samples:
                 sample_name = sample.sample
                 sample_data = sample.data
                 for k, v in sample_data._asdict().items():
                     if isinstance(v, list):
                         v = ';'.join([str(val) for val in v])
-                    k = '{}_{}'.format(sample_name, k)
+                    k = '{}_{}'.format(sample_type, k)
                     data[k] = v
-
+                sample_type="tumor"
             yield data
+# {chrom1, chrom2, pos1, pos2, strand1, strand2, svype, id, tumor_reads, tumor_split_reads, tumor_paired_reads, normal_reads, normal_split_reads, normal_paired_reads, filter, quality, rearrangement_type, germline_status}
 
     @staticmethod
     def _group_bnds(calls):
@@ -146,6 +149,7 @@ class SV_vcf():
                     continue
 
                 if record['MATEID'] in bnds:
+                    
                     yield (record, bnds[record['MATEID']])
                     bnds.pop(record['MATEID'])
                 else:
@@ -201,7 +205,6 @@ class SV_vcf():
 
         strands = record['STRANDS'].split(':')[0]
         assert len(strands) == 2
-
         outdata = {
             'chromosome_1': record['chrom'],
             'position_1': record['pos'],
@@ -230,7 +233,9 @@ class SV_vcf():
             'chromosome_2': mate2['chrom'],
             'position_2': mate2['pos'],
             'strand_2': strand_2,
-            'type': mate1['SVTYPE']
+            'type': mate1['SVTYPE'],
+            'filter': mate1["filter"],
+            "quality": mate1["qual"]
         }
 
         return outdata
@@ -238,7 +243,6 @@ class SV_vcf():
     def _filter_low_qual_calls(self, calls):
 
         for call in calls:
-
             if len(call) == 1 and self.caller == 'lumpy':
 
                 if call[0]['filter'] and 'LOW_QUAL' in call[0]['filter']:
@@ -251,21 +255,24 @@ class SV_vcf():
 
             yield call
 
-    def fetch(self):
+    def gather_records(self):
         records = self._parse_vcf()
         records = self._group_bnds(records)
         records = self._filter_low_qual_calls(records)
 
-        for record in records:
-            if len(record) == 1 and self.caller == 'lumpy':
-                yield self._process_lumpy_unmatched_record(record)
-            else:
-                yield self._process_bnd_call(record)
+        return records
+    
+
+        # for record in records:
+        #     if len(record) == 1 and self.caller == 'lumpy':
+        #         yield self._process_lumpy_unmatched_record(record)
+        #     else:
+        #         yield self._process_bnd_call(record)
+
 
     def as_data_frame(self):
-        data = [record for record in self.fetch()]
+        data = pd.DataFrame(self.record_data)
 
-        data = pd.DataFrame(data)
         data['caller'] = self.caller
 
         data['breakpoint_id'] = data.index
@@ -278,13 +285,57 @@ class SV_vcf():
         df = self.as_data_frame()
         df.to_csv(output, sep="\t", index=False)
 
+
 class Lumpy_vcf(SV_vcf):
     def __init__(self, filepath):
         super(Lumpy_vcf, self).__init__(filepath, "lumpy")
+        self.record_data = self.parse()
+        
+    def parse(self):
+        records = self.gather_records()
+        return [self.process_record(record) for record in records]
+
+    def process_record(self, record):
+        mate1 = record[0]
+
+        if len(record) == 1:
+            processed = self._process_lumpy_unmatched_record(record)
+        else:
+            processed = self._process_bnd_call(record)
+            
+        processed["tumor_depth"] = mate1["tumor_SU"]
+        processed["tumor_split_reads"] = mate1["tumor_SR"]
+        processed["tumor_paired_reads"] =  mate1["tumor_PE"]
+        processed["normal_depth"] = mate1["normal_SU"]
+        processed["normal_split_reads"] = mate1["normal_SR"]
+        processed["normal_paired_reads"] = mate1["normal_PE"]
+
+        return processed
+
 
 class Gridss_vcf(SV_vcf):
     def __init__(self, filepath):
         super(Gridss_vcf, self).__init__(filepath, "gridss")
+       self.record_data = self.parse()
+        
+    def parse(self):
+        records = self.gather_records()
+        return [self.process_record(record) for record in records]
+
+    def process_record(self, record):
+        mate1 = record[0]
+
+        processed = self._process_bnd_call(record)
+            
+        processed["tumor_depth"] = mate1["tumor_SU"]
+        processed["tumor_split_reads"] = mate1["tumor_SR"]
+        processed["tumor_paired_reads"] =  mate1["tumor_PE"]
+        processed["normal_depth"] = mate1["normal_SU"]
+        processed["normal_split_reads"] = mate1["normal_SR"]
+        processed["normal_paired_reads"] = mate1["normal_PE"]
+
+        return processed
+
 
 class Svaba_vcf(SV_vcf):
     def __init__(self, filepath):
@@ -438,7 +489,9 @@ class Museq_vcf(SNV_vcf):
 # class SNV_vcf():
 
 
-mu = Museq_vcf("/juno/work/shah/tantalus/SC-3281/results/variant_calling/sample_SA1202LA/strelka_indel.vcf.gz")
-print(mu.as_data_frame())
+# mu = Museq_vcf("/juno/work/shah/tantalus/SC-3281/results/variant_calling/sample_SA1202LA/strelka_indel.vcf.gz")
+# print(mu.as_data_frame())
 
 # split_vcf("/juno/work/shah/users/grewald/SVBENCH2/trimming_primary_only/wgs/output/breakpoints/SA1256PP/SA1256PP_lumpy.vcf", 500)
+
+# Lumpy_vcf("/juno/work/shah/users/grewald/SVBENCH2/trimming_primary_only/wgs/output/breakpoints/SA1256PP/SA1256PP_lumpy.vcf").to_csv("out")
