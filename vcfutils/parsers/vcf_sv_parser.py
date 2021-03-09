@@ -191,13 +191,9 @@ class SV_vcf():
 
     def as_data_frame(self):
         data = pd.DataFrame(self.record_data)
-
         data['caller'] = self.caller
-
         data['breakpoint_id'] = data.index
-
         data['breakpoint_id'] = data['breakpoint_id'].astype(str) + '_' + data['caller']
-
         return data
 
     def to_csv(self, output):

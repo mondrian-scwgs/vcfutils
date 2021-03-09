@@ -5,9 +5,13 @@ import os
 import itertools
 from numpy import NaN
 import gzip
+from csverve import csverve 
+import yaml
+
 
 class VcfUndeclaredSampleError(Exception):
     pass
+
 
 class SNV_vcf():
     def __init__(self, filepath, filters):
@@ -25,12 +29,10 @@ class SNV_vcf():
         normal = normal_sample_line[0].split("=")[-1]
         normal = normal.strip().strip("\n")
         tumor = None
-
         if len(tumor_sample_line) != 0:
             assert len(tumor_sample_line) == 1
             tumor = tumor_sample_line[0].split("=")[-1]
             tumor = tumor.strip().strip("\n")
-
         return normal, tumor
 
 
@@ -67,20 +69,37 @@ class SNV_vcf():
                 data["samples"][k] = v
 
         return data
-    # def parse_record(self, record):
-    #     data = self.parse_main_cols(record)
-    #     # info = record.INFO
 
-    #     # snpeff_annotations = self.parse_snpeff(self.snpeff_cols, info['ANN'], record.CHROM, record.POS)
-    #     # ma_annotations = self.parse_mutation_assessor(self.ma_cols, info['MA'], record.CHROM, record.POS)
 
-    #     # id_annotations = self.parse_list_annotations(info['DBSNP'], record.CHROM, record.POS, 'dbsnp')
-    #     # id_annotations += self.parse_list_annotations(info['Cosmic'], record.CHROM, record.POS, 'cosmic')
-    #     # ## TODO: I expected to see a 1000gen: False in the record. but the key is missing.
-    #     # id_annotations += self.parse_flag_annotation(info.get('1000Gen'), record.CHROM, record.POS, '1000Gen')
-    #     # id_annotations += self.parse_flag_annotation(info.get('LOW_MAPPABILITY'), record.CHROM, record.POS,
-    #     #                                              'LOW_MAPPABILITY')
-    #     return data
+    def eval_expr(self, val, operation, threshold):
+        if operation == "gt":
+            if val > threshold:
+                return True
+        elif operation == 'ge':
+            if val >= threshold:
+                return True
+        elif operation == 'lt':
+            if val < threshold:
+                return True
+        elif operation == 'le':
+            if val <= threshold:
+                return True
+        elif operation == 'eq':
+            if val == threshold:
+                return True
+        elif operation == 'ne':
+            if not val == threshold:
+                return True
+        elif operation == 'in':
+            if val in threshold:
+                return True
+        elif operation == 'notin':
+            if not val in threshold:
+                return True
+        else:
+            raise Exception("unknown operator type: {}".format(operation))
+
+        return False
 
     def filter_records(self, record):
 
@@ -91,24 +110,29 @@ class SNV_vcf():
                 if self.eval_expr(record[filter_name], relationship, value):
                     return True
 
-            # for annotation in annotations:
-            #     if filter_name == annotation['type']:
-            #         if self.eval_expr(record[filter_name], relationship, value):
-            #             return True
-
     def gather_records(self):
         for record in self.reader:
             data = self.parse_main_cols(record)
-
             if self.filters:
                 if self.filter_records(data["main_cols"]):
                     continue
             yield data
 
-    def as_data_frame(self):
-        return pd.DataFrame(list(self.record_data))
 
-
+    def to_csv(self, output):
+        dataframes = map(pd.DataFrame, helpers._group_iterator(self.record_data))
+        write_header=True
+        for dataframe in dataframes:
+            csverve.write_dataframe_to_csv_and_yaml(dataframe, output, 
+                dataframe.dtypes, write_header=write_header
+            )
+            write_header=False
+        yaml_file = output + ".yaml"
+        metadata = yaml.load(open(yaml_file))
+        metadata["samples"] = {"tumor": self.tumor, "normal": self.normal}
+        with open(yaml_file, 'wt') as f:
+            yaml.safe_dump(metadata, f, default_flow_style=False)    
+    
 
 class Mutect_vcf(SNV_vcf):
     def __init__(self, filepath, filters=None):
@@ -116,8 +140,8 @@ class Mutect_vcf(SNV_vcf):
         self.record_data = []
         
     def parse(self):
-        data = self.gather_records()
-        self.record_data = [self.process_record(record) for record in data]
+        records = iter(self.gather_records())
+        self.record_data = map(self.process_record, records)
 
     def process_record(self, record):
         main_cols = record["main_cols"]
@@ -132,14 +156,15 @@ class Mutect_vcf(SNV_vcf):
         main_cols["normal_ref_depth"] = samples["AD_NORMAL"].split(";")[0]
         return main_cols
 
+
 class Samtools_vcf(SNV_vcf):
     def __init__(self, filepath, filters=None):
         super(Samtools_vcf, self).__init__(filepath, filters=None)
         self.record_data = []
         
     def parse(self):
-        data = self.gather_records()
-        self.record_data = [self.process_record(record) for record in data]
+        records = iter(self.gather_records())
+        self.record_data = map(self.process_record, records)
 
     def process_record(self, record):
         main_cols = record["main_cols"]
@@ -160,8 +185,8 @@ class Freebayes_vcf(SNV_vcf):
         self.record_data = []
         
     def parse(self):
-        data = self.gather_records()
-        self.record_data = [self.process_record(record) for record in data]
+        records = iter(self.gather_records())
+        self.record_data = map(self.process_record, records)
 
     def process_record(self, record):
         main_cols = record["main_cols"]
@@ -179,14 +204,15 @@ class Bcftools_vcf(SNV_vcf):
     def __init__(self, filepath, filters=None):
         super(Bcftools_vcf, self).__init__(filepath, filters)
 
+
 class Rtg_vcf(SNV_vcf):
     def __init__(self, filepath, filters=None):
         super(Rtg_vcf, self).__init__(filepath, filters)
         self.record_data = []
         
     def parse(self):
-        data = self.gather_records()
-        self.record_data = [self.process_record(record) for record in data]
+        records = iter(self.gather_records())
+        self.record_data = map(self.process_record, records)
 
     def process_record(self, record):
         main_cols = record["main_cols"]
@@ -212,8 +238,8 @@ class Strelka_vcf(SNV_vcf):
         self.record_data = []
         
     def parse(self):
-        data = self.gather_records()
-        self.record_data = [self.process_record(record) for record in data]
+        records = iter(self.gather_records())
+        self.record_data = map(self.process_record, records)
 
     def process_record(self, record):
         main_cols = record["main_cols"]
@@ -234,8 +260,8 @@ class Museq_vcf(SNV_vcf):
         self.record_data = []
 
     def parse(self):
-        data = self.gather_records()
-        self.record_data = [self.process_record(record) for record in data]
+        records = iter(self.gather_records())
+        self.record_data = map(self.process_record, records)
 
     def process_record(self, record):
         main_cols = record["main_cols"]

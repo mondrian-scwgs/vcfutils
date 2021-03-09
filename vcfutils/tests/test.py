@@ -36,31 +36,28 @@ filter_out.append(('PR', 'lt', 0))
 
 # p = vcf_snv_parser.Freebayes_vcf(freebayes, filter_out)
 # p.parse()
-# print(p.as_data_frame())
+# p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/freebayes.csv.gz")
 
-
-# p = vcf_snv_parser.Rtg_vcf(rtg, filter_out)
-# p.parse()
-# print(p.as_data_frame())
-
+p = vcf_snv_parser.Rtg_vcf(rtg, filter_out)
+p.parse()
+p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/rtg.csv.gz")
 
 # p = vcf_snv_parser.Samtools_vcf(samtools, filter_out)
 # p.parse()
-# print(p.as_data_frame())
+# p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/samtools.csv.gz")
 
 # p = vcf_snv_parser.Museq_vcf(museq, filter_out)
 # p.parse()
-# print(p.as_data_frame())
-
+# p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/museq_germline.csv.gz")
 
 # p = vcf_snv_parser.Mutect_vcf(mutect, filter_out)
 # p.parse()
-# print(p.as_data_frame())
+# p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/mutect.csv.gz")
 
 # p = vcf_snv_parser.Strelka_vcf(strelka, filter_out)
 # p.parse()
-# print(p.as_data_frame())
+# p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/strelka.csv.gz")
 
-p = vcf_snv_parser.Museq_vcf(museq_somatic, filter_out)
-p.parse()
-print(p.as_data_frame())
+# p = vcf_snv_parser.Museq_vcf(museq_somatic, filter_out)
+# p.parse()
+# print(p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/museq_csv.csv.gz"))

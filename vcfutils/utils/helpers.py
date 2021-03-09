@@ -1,5 +1,8 @@
 import warnings
 import vcf
+import itertools
+
+
 def _get_header(infile):
     '''
     Extract header from the VCF file
@@ -26,3 +29,15 @@ def _get_reader(vcf_file):
         return vcf.Reader(filename=vcf_file)
     else:
         return vcf.Reader(open(vcf_file, "r"))
+
+def _group_iterator(iterable, chunk=100000):
+    while True:
+        yield itertools.chain((next(iterable),), itertools.islice(iterable, chunk-1))
+
+# def _group_iterator(iterable,n=100):
+#     it = iter(iterable)
+#     while True:
+#         chunk = tuple(itertools.islice(it, n))
+#         if not chunk:
+#             return
+#         yield chunk
