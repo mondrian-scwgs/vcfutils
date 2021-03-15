@@ -1,11 +1,8 @@
-
-
-
+from vcfutils.parsers import vcf_snv_parser, vcf_sv_parser
 import click
-from vcfutils import vcfutils
 import warnings
 
-COMMANDS = ("concat", "vcf2csv") 
+COMMANDS = ("vcf2csv") 
 
 @click.command()
 @click.argument('cmd')
@@ -23,8 +20,6 @@ def main(cmd, output, input_vcf=None, vcf_type=None):
         warnings.warn("invalid command, choose from (concat, vcf2csv)")
         return
 
-    if cmd == "concat":
-        vcfutils.concatenate_vcf(list(input_vcf), output)
 
     if cmd == "vcf2csv":
         if len(input_vcf) > 1:
@@ -33,24 +28,34 @@ def main(cmd, output, input_vcf=None, vcf_type=None):
         input_vcf = input_vcf[0]
         
         if vcf_type == "lumpy":
-            vcfutils.Lumpy_vcf(input_vcf).to_csv(output)
-
-        elif vcf_type == "destruct":
-            pass
-            # vcfutils.Lumpy_vcf(input_vcf).to_csv(output)
+            parser = vcf_sv_parser.Lumpy_vcf(input_vcf)
 
         elif vcf_type == "svaba":
-            vcfutils.Svaba_vcf(input_vcf).to_csv(output)
+            parser = vcf_sv_parser.Svaba_vcf(input_vcf)
 
         elif vcf_type == "gridss":
-            vcfutils.Gridss_vcf(input_vcf).to_csv(output)
+            parser = vcf_sv_parser.Gridss_vcf(input_vcf)
 
         elif vcf_type == "strelka":
-            pass
+            parser = vcf_snv_parser.Strelka_vcf(input_vcf)
+
+        elif vcf_type == "freebayes":
+            parser = vcf_snv_parser.Freebayes_vcf(input_vcf)
+
         elif vcf_type == "museq":
-            pass
+            parser = vcf_snv_parser.Museq_vcf(input_vcf)
+        
+        elif vcf_type == "rtg":
+            parser = vcf_snv_parser.Rtg_vcf(input_vcf)
+
+        elif vcf_type == "samtools":
+            parser = vcf_snv_parser.Samtools_vcf(input_vcf)
+
+        elif vcf_type == "mutect":
+            parser = vcf_snv_parser.Mutect_vcf(input_vcf)
 
         else:
             warnings.warn("invalid vcf type, choose from (lumpy, destruct, svaba, gridss, strelka, museq)")
             return 
-    pass
+        parser.parse()
+        parser.to_csv(output)

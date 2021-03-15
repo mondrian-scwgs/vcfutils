@@ -273,6 +273,8 @@ class SV_vcf():
         classify rearrangement type in prepped record
         @param output: output filepath
         """
+        if not output.endswith(".gz"):
+            output += ".gz"
         df: pd.DataFrame = self.as_data_frame()
         df: pd.DataFrame = self._classify_calls(df)
         df.to_csv(output, sep="\t", index=False)

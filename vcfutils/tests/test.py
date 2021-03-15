@@ -1,5 +1,12 @@
 from vcfutils.parsers import vcf_snv_parser
 from vcfutils.parsers import vcf_sv_parser
+
+
+
+
+
+
+
 import os
 
 test_data_dir = "/juno/work/shah/abramsd/CODE/testdata"
@@ -38,9 +45,9 @@ filter_out.append(('PR', 'lt', 0))
 # p.parse()
 # p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/freebayes.csv.gz")
 
-p = vcf_snv_parser.Rtg_vcf(rtg, filter_out)
-p.parse()
-p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/rtg.csv.gz")
+# p = vcf_snv_parser.Rtg_vcf(rtg, filter_out)
+# p.parse()
+# p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/rtg.csv.gz")
 
 # p = vcf_snv_parser.Samtools_vcf(samtools, filter_out)
 # p.parse()
@@ -58,6 +65,6 @@ p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/rtg.csv.gz")
 # p.parse()
 # p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/strelka.csv.gz")
 
-# p = vcf_snv_parser.Museq_vcf(museq_somatic, filter_out)
-# p.parse()
-# print(p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/museq_csv.csv.gz"))
+p = vcf_snv_parser.Museq_vcf(museq_somatic)
+p.parse()
+print(p.to_csv("/juno/work/shah/abramsd/CODE/test_outs/museq_csv.csv.gz"))

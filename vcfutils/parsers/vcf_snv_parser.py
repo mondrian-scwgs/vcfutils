@@ -149,6 +149,8 @@ class SNV_vcf():
         write parsed vcf data to a csv
         @param output: output file
         """
+        if not output.endswith(".gz"):
+            output += ".gz"
         dataframes: Mapping[pd.DataFrame, Dict[str, Union[str, int, float]]]
         dataframes = map(pd.DataFrame, helpers._group_iterator(self.record_data))
         write_header = True
@@ -390,7 +392,6 @@ class Museq_vcf(SNV_vcf):
         records = iter(self.gather_records())
         self.record_data: Iterable[Dict[str, Union[str, int, float]]]
         self.record_data = map(self.process_record, records)
-
 
     def process_record(self, 
         record:Dict[str, Dict[str, Union[str, int, float]]] 
