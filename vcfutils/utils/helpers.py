@@ -31,8 +31,12 @@ def _get_reader(vcf_file):
         return vcf.Reader(open(vcf_file, "r"))
 
 def _group_iterator(iterable, chunk=100000):
+    print(next(iterable))
+    cc
     while True:
+        print("a")
         yield itertools.chain((next(iterable),), itertools.islice(iterable, chunk-1))
+        print("b")
 
 # def _group_iterator(iterable,n=100):
 #     it = iter(iterable)

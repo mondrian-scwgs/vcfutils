@@ -89,45 +89,6 @@ class SNV_vcf():
         return data
 
 
-    # def eval_expr(self, val, operation, threshold):
-    #     if operation == "gt":
-    #         if val > threshold:
-    #             return True
-    #     elif operation == 'ge':
-    #         if val >= threshold:
-    #             return True
-    #     elif operation == 'lt':
-    #         if val < threshold:
-    #             return True
-    #     elif operation == 'le':
-    #         if val <= threshold:
-    #             return True
-    #     elif operation == 'eq':
-    #         if val == threshold:
-    #             return True
-    #     elif operation == 'ne':
-    #         if not val == threshold:
-    #             return True
-    #     elif operation == 'in':
-    #         if val in threshold:
-    #             return True
-    #     elif operation == 'notin':
-    #         if not val in threshold:
-    #             return True
-    #     else:
-    #         raise Exception("unknown operator type: {}".format(operation))
-
-    #     return False
-
-    # def filter_records(self, record):
-
-    #     for vcf_filter in self.filters:
-    #         filter_name, relationship, value = vcf_filter
-
-    #         if filter_name in record:
-    #             if self.eval_expr(record[filter_name], relationship, value):
-    #                 return True
-
     def gather_records(
             self
         ) ->  Iterable[Dict[str, Dict[str, Union[str, int, float]]]]:
@@ -138,9 +99,6 @@ class SNV_vcf():
         for record in self.reader:
             data:  Dict[str, Dict[str, Union[str, int, float]]]
             data = self.parse_main_cols(record)
-            # if self.filters:
-            #     if self.filter_records(data["main_cols"]):
-            #         continue
             yield data
 
 
@@ -151,10 +109,13 @@ class SNV_vcf():
         """
         if not output.endswith(".gz"):
             output += ".gz"
+        print(itertools.islice(self.record_data, 100000-1))
         dataframes: Mapping[pd.DataFrame, Dict[str, Union[str, int, float]]]
         dataframes = map(pd.DataFrame, helpers._group_iterator(self.record_data))
         write_header = True
         for dataframe in dataframes:
+            print("here")
+            cc
             csverve.write_dataframe_to_csv_and_yaml(dataframe, output, 
                 dataframe.dtypes, write_header=write_header
             )
